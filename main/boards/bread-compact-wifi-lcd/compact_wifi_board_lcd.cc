@@ -95,7 +95,8 @@ private:
     // Стартовое состояние — мотор выключен
     gpio_set_level(MOTOR_PIN1, 1);
     gpio_set_level(MOTOR_PIN2, 0);
-}
+} 
+
 
 
     void InitializeMotorTool() {
