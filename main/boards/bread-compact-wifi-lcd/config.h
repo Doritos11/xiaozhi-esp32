@@ -286,4 +286,8 @@
 // A MCP Test: Control a lamp
 #define LAMP_GPIO GPIO_NUM_18
 
+#define MOTOR_PIN1 GPIO_NUM_2
+#define MOTOR_PIN2 GPIO_NUM_3
+
+
 #endif // _BOARD_CONFIG_H_

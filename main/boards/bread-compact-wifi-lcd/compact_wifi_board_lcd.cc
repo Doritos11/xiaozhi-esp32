@@ -17,6 +17,9 @@
 #include <esp_lcd_panel_ops.h>
 #include <driver/spi_common.h>
 
+#include "mcp_server.h"
+#include <driver/gpio.h>
+
 #if defined(LCD_TYPE_ILI9341_SERIAL)
 #include "esp_lcd_ili9341.h"
 #endif
@@ -79,6 +82,43 @@ private:
         buscfg.max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * sizeof(uint16_t);
         ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &buscfg, SPI_DMA_CH_AUTO));
     }
+
+    void InitializeMotor() {
+    gpio_config_t config = {
+        .pin_bit_mask = (1ULL << MOTOR_PIN1) | (1ULL << MOTOR_PIN2),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&config);
+    // Стартовое состояние — мотор выключен
+    gpio_set_level(MOTOR_PIN1, 1);
+    gpio_set_level(MOTOR_PIN2, 0);
+}
+
+
+    void InitializeMotorTool() {
+    auto& mcp_server = McpServer::GetInstance();
+    mcp_server.AddTool(
+        "self.motor.control",
+        "Включает или выключает мотор. Вызывай, когда пользователь просит включить, выключить, запустить или остановить мотор.",
+        PropertyList({
+            Property("state", kPropertyTypeBoolean)
+        }),
+        [this](const PropertyList& properties) -> ReturnValue {
+            bool state = properties["state"].value<bool>();
+            if (state) {
+                gpio_set_level(MOTOR_PIN1, 1);
+                gpio_set_level(MOTOR_PIN2, 0);
+            } else {
+                gpio_set_level(MOTOR_PIN1, 0);
+                gpio_set_level(MOTOR_PIN2, 1);
+            }
+            return state ? "Мотор включен" : "Мотор выключен";
+        });
+}
+
 
     void InitializeLcdDisplay() {
         esp_lcd_panel_io_handle_t panel_io = nullptr;
@@ -160,6 +200,10 @@ public:
         InitializeLcdDisplay();
         InitializeButtons();
         InitializeTools();
+        InitializeMotor();
+        InitializeMotorTool();
+
+
         if (DISPLAY_BACKLIGHT_PIN != GPIO_NUM_NC) {
             GetBacklight()->RestoreBrightness();
         }
